@@ -12,6 +12,7 @@ model User {
   email String @unique
   name  String?
   quizzes Quiz[]
+  jobs Job[]
 }
 
 model Quiz {
@@ -21,4 +22,17 @@ model Quiz {
   user  User @relation(fields: [userId], references: [id])
   userId String
   createdAt DateTime @default(now())
+}
+
+model Job {
+  id     String   @id @default(cuid())
+  fileName String
+  status String  @default("queued")
+  resultQuizId String?
+  error  String?
+  numberOfQuestions Int @default(10)
+  user   User?   @relation(fields: [userId], references: [id])
+  userId String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

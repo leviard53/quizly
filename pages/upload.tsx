@@ -1,25 +1,50 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import axios from 'axios'
+import { useRouter } from 'next/router'
 
 export default function UploadPage() {
   const [file, setFile] = useState<File | null>(null)
   const [status, setStatus] = useState('')
+  const [jobId, setJobId] = useState<string | null>(null)
+  const router = useRouter()
+
+  useEffect(() => {
+    let timer: any
+    if (jobId) {
+      const poll = async () => {
+        try {
+          const res = await axios.get(`/api/job/${jobId}`)
+          const { status, resultQuizId } = res.data
+          setStatus(`Job status: ${status}`)
+          if (status === 'done' && resultQuizId) {
+            router.push(`/quiz/${resultQuizId}`)
+          }
+          if (status === 'error') {
+            // show error
+            setStatus(`Error: ${res.data.error}`)
+          }
+        } catch (err) {
+          console.error(err)
+        }
+      }
+      poll()
+      timer = setInterval(poll, 3000)
+    }
+    return () => clearInterval(timer)
+  }, [jobId])
 
   const handleSubmit = async (e:any) => {
     e.preventDefault()
     if (!file) return
     const form = new FormData()
     form.append('file', file)
+    form.append('numberOfQuestions', '10')
     setStatus('Uploading...')
     try {
       const res = await axios.post('/api/upload', form, { headers: { 'Content-Type': 'multipart/form-data' } })
       const { jobId } = res.data
-      setStatus('File uploaded. Generating quiz...')
-      // call generate endpoint
-      const gen = await axios.post('/api/generate', { jobId })
-      setStatus('Quiz generated — preview below')
-      // show preview (left as exercise)
-      console.log(gen.data)
+      setJobId(jobId)
+      setStatus('Uploaded. Job queued.')
     } catch (err:any) {
       setStatus('Error: ' + (err.message || 'upload failed'))
     }
